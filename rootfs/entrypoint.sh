@@ -3,7 +3,15 @@
 set -eu
 
 if [[ $# -eq 0 ]]; then
-    set -- xpra seamless --daemon=no --bind-tcp=0.0.0.0:8080 --mdns=no --webcam=no --printing=no --systemd-run=no
+    set -- xpra seamless "${DISPLAY}" --daemon=no --bind-tcp=0.0.0.0:8080 --mdns=no --webcam=no --printing=no --systemd-run=no
+fi
+
+if [[ -e /dev/dri/card0 ]]; then
+    video_group_id=$(stat -c "%g" /dev/dri/card0)
+    if [[ "$(getent group video | cut -d: -f3)" != "${video_group_id}" ]]; then
+        groupmod -g "${video_group_id}" video
+    fi
+    unset video_group_id
 fi
 
 export USER="${NON_ROOT_USER}"

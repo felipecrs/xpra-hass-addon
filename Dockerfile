@@ -62,7 +62,7 @@ ENV NON_ROOT_USER_ID="1000"
 ENV NON_ROOT_HOME="/home/${NON_ROOT_USER}"
 RUN groupadd -g "${NON_ROOT_USER_ID}" "${NON_ROOT_USER}"; \
     useradd -l -d "${NON_ROOT_HOME}" -u "${NON_ROOT_USER_ID}" -g "${NON_ROOT_USER_ID}" -m "${NON_ROOT_USER}" -s /bin/bash -p ""; \
-    usermod -aG xpra,audio,video "${NON_ROOT_USER}"; \
+    usermod -aG xpra,audio,pulse,video "${NON_ROOT_USER}"; \
     apt-get update; \
     apt-get install --no-install-recommends -y \
         sudo; \
@@ -72,7 +72,7 @@ RUN groupadd -g "${NON_ROOT_USER_ID}" "${NON_ROOT_USER}"; \
 
 ENV WINEPREFIX="${NON_ROOT_HOME}/wine-prefix"
 ENV WINEARCH="win32"
-ENV DISPLAY=":0"
+ENV DISPLAY=":10"
 
 # https://github.com/Xpra-org/xpra/issues/4383#issuecomment-2408586278
 ENV XPRA_PRIVATE_PULSEAUDIO=0
@@ -83,3 +83,10 @@ EXPOSE 8080
 
 ENTRYPOINT ["/init", "/entrypoint.sh"]
 CMD []
+
+RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb; \
+    apt-get update; \
+    apt-get install --no-install-recommends -y \
+        ./google-chrome-stable_current_amd64.deb; \
+    rm -f google-chrome-stable_current_amd64.deb; \
+    rm -rf /var/lib/apt/lists/*
