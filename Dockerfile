@@ -15,31 +15,18 @@ RUN apt-get update; \
     locale-gen; \
     rm -rf /var/lib/apt/lists/*
 
+# TODO: use --no-install-recommends to reduce image size. WIP packages list:
+#   xpra xpra-x11 xpra-html5 adduser xdg-user-dirs xdg-utils python3-xdg gnome-backgrounds
 ARG DEBIAN_CODENAME
 RUN wget -q -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc; \
     wget -q -O "/etc/apt/sources.list.d/xpra.sources" "https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/${DEBIAN_CODENAME}/xpra.sources"; \
     apt-get update; \
-    # --no-install-recommends: xpra xpra-x11 xpra-html5 adduser xdg-user-dirs xdg-utils python3-xdg gnome-backgrounds
     apt-get install --install-recommends -y \
         xpra xterm-; \
     mkdir -p /run/dbus; \
     apt-get install --no-install-recommends -y \
-        supervisor gnome-menus terminator; \
+        gnome-menus terminator; \
     rm -rf /var/lib/apt/lists/*
-
-# RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb; \
-#     apt-get update; \
-#     apt-get install --no-install-recommends -y \
-#         ./google-chrome-stable_current_amd64.deb; \
-#     rm -f google-chrome-stable_current_amd64.deb; \
-#     rm -rf /var/lib/apt/lists/*
-
-# RUN wget -q -O /etc/apt/keyrings/mozilla.asc https://packages.mozilla.org/apt/repo-signing-key.gpg; \
-#     echo "deb [signed-by=/etc/apt/keyrings/mozilla.asc] https://packages.mozilla.org/apt mozilla main" | tee /etc/apt/sources.list.d/mozilla.list/ \
-#     apt-get update; \
-#     apt-get install --no-install-recommends -y \
-#         firefox; \
-#     rm -rf /var/lib/apt/lists/*
 
 ARG WINE_VERSION="10.13"
 ARG WINE_BRANCH="staging"
@@ -62,14 +49,30 @@ ENV WINEPREFIX="/root/prefix32"
 ENV WINEARCH="win32"
 ENV DISPLAY=":0"
 
-COPY ./xpra.conf /etc/xpra/xpra.conf
-COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+ARG S6_OVERLAY_VERSION="3.2.1.0"
+RUN wget -q -O- "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" \
+        | tar -C / -Jxpf -; \
+    wget -q -O- "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-$(uname -m).tar.xz" \
+        | tar -C / -Jxpf -
+
+# Fails the container if any service fails to start
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS="2"
+# Waits for all services to start before running CMD
+ENV S6_CMD_WAIT_FOR_SERVICES="1"
+# Honors container's environment variables on CMD
+ENV S6_KEEP_ENV="1"
+
+COPY ./rootfs /
 
 EXPOSE 8080
 
-CMD ["supervisord"]
+ENTRYPOINT ["/init"]
+
+CMD ["xpra", "seamless", "--daemon=no"]
 
 # RUN apt-get update; \
 #     apt-get install --no-install-recommends -y \
 #         fluxbox; \
 #     rm -rf /var/lib/apt/lists/*
+#
+# CMD ["xpra", "desktop", "--daemon=no", "--start-child=fluxbox"]
