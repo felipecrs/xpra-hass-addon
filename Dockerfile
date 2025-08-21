@@ -45,7 +45,7 @@ RUN dpkg --add-architecture i386; \
     wget -q -O- "https://raw.githubusercontent.com/scottyhardy/docker-wine/${DOCKER_WINE_VERSION}/download_gecko_and_mono.sh" \
         | bash -s -- "${WINE_VERSION}"
 
-ENV WINEPREFIX="/root/prefix32"
+ENV WINEPREFIX="/root/wine-prefix"
 ENV WINEARCH="win32"
 ENV DISPLAY=":0"
 
