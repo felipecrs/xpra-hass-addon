@@ -11,10 +11,10 @@ ingress: true
 ingress_port: 8080
 ingress_stream: true
 panel_icon: mdi:web
-video: true # maybe
+video: true
 map:
   - type: data
-    path: /root
+    path: /home/xpra-addon
     read_only: false
   - type: media
     path: /media

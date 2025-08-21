@@ -1,7 +1,6 @@
 ARG DEBIAN_CODENAME="trixie"
 FROM debian:${DEBIAN_CODENAME}
 
-ENV HOME="/root"
 ENV LC_ALL="C.UTF-8"
 ENV LANG="en_US.UTF-8"
 ENV LANGUAGE="en_US.UTF-8"
@@ -45,10 +44,6 @@ RUN dpkg --add-architecture i386; \
     wget -q -O- "https://raw.githubusercontent.com/scottyhardy/docker-wine/${DOCKER_WINE_VERSION}/download_gecko_and_mono.sh" \
         | bash -s -- "${WINE_VERSION}"
 
-ENV WINEPREFIX="/root/wine-prefix"
-ENV WINEARCH="win32"
-ENV DISPLAY=":0"
-
 ARG S6_OVERLAY_VERSION="3.2.1.0"
 RUN wget -q -O- "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" \
         | tar -C / -Jxpf -; \
@@ -62,17 +57,29 @@ ENV S6_CMD_WAIT_FOR_SERVICES="1"
 # Honors container's environment variables on CMD
 ENV S6_KEEP_ENV="1"
 
+ENV NON_ROOT_USER="xpra-addon"
+ENV NON_ROOT_USER_ID="1000"
+ENV NON_ROOT_HOME="/home/${NON_ROOT_USER}"
+RUN groupadd -g "${NON_ROOT_USER_ID}" "${NON_ROOT_USER}"; \
+    useradd -l -d "${NON_ROOT_HOME}" -u "${NON_ROOT_USER_ID}" -g "${NON_ROOT_USER_ID}" -m "${NON_ROOT_USER}" -s /bin/bash -p ""; \
+    usermod -aG xpra,audio,video "${NON_ROOT_USER}"; \
+    apt-get update; \
+    apt-get install --no-install-recommends -y \
+        sudo; \
+    rm -rf /var/lib/apt/lists/*; \
+    echo "${NON_ROOT_USER} ALL=(ALL) NOPASSWD:ALL" | tee "/etc/sudoers.d/${NON_ROOT_USER}"; \
+    sudo -u "${NON_ROOT_USER}" true
+
+ENV WINEPREFIX="${NON_ROOT_HOME}/wine-prefix"
+ENV WINEARCH="win32"
+ENV DISPLAY=":0"
+
+# https://github.com/Xpra-org/xpra/issues/4383#issuecomment-2408586278
+ENV XPRA_PRIVATE_PULSEAUDIO=0
+
 COPY ./rootfs /
 
 EXPOSE 8080
 
-ENTRYPOINT ["/init"]
-
-CMD ["xpra", "seamless", "--daemon=no"]
-
-# RUN apt-get update; \
-#     apt-get install --no-install-recommends -y \
-#         fluxbox; \
-#     rm -rf /var/lib/apt/lists/*
-#
-# CMD ["xpra", "desktop", "--daemon=no", "--start-child=fluxbox"]
+ENTRYPOINT ["/init", "/entrypoint.sh"]
+CMD []
