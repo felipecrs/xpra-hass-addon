@@ -29,8 +29,20 @@ mkdir -p "${NON_ROOT_HOME}/.xpra"
 chown "${NON_ROOT_USER_ID}:${NON_ROOT_USER_ID}" "${NON_ROOT_HOME}/.xpra"
 chmod 700 "${NON_ROOT_HOME}/.xpra"
 
+# Create standard directories inside user home
+/command/s6-setuidgid "${NON_ROOT_USER}" xdg-user-dirs-update
+
+# Create standard home files if not there yet
+for file in /etc/skel/.*; do
+    file_name=$(basename "${file}")
+    if [[ ! -f "${NON_ROOT_HOME}/${file_name}" ]]; then
+        cp -a "${file}" "${NON_ROOT_HOME}/${file_name}"
+        chown "${NON_ROOT_USER_ID}:${NON_ROOT_USER_ID}" "${NON_ROOT_HOME}/${file_name}"
+    fi
+done
+
 if [[ $# -eq 0 ]]; then
-    set -- xpra seamless "${DISPLAY}" --daemon=no --bind-tcp=0.0.0.0:8080 --mdns=no --webcam=no --printing=no --systemd-run=no --xvfb=Xdummy --start-late="zutty -e /initialize.sh"
+    set -- xpra seamless "${DISPLAY}" --daemon=no --bind-tcp=0.0.0.0:8080 --mdns=no --webcam=no --printing=no --systemd-run=no --ssh-upgrade=no --xvfb=Xdummy --start-late="terminator -e /initialize.sh"
 fi
 
 exec /init /command/s6-setuidgid "${NON_ROOT_USER}" "$@"

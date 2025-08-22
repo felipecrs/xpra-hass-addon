@@ -51,8 +51,9 @@ RUN wget -q -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc; \
         # Xdummy is better than xvfb
         # gnome-menus is because of https://github.com/Xpra-org/xpra/issues/4644
         # xdg-utils because it is cool
-        # zutty to provide some terminal
-        xpra-client xserver-xorg-video-dummy gnome-menus xdg-utils zutty; \
+        # terminator to provide some terminal emulator
+        # x11-utils for tools like xmessage
+        xpra-client xserver-xorg-video-dummy gnome-menus xdg-utils terminator nano x11-utils; \
     mkdir -p /run/dbus; \
     rm -rf /var/lib/apt/lists/*
 
