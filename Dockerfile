@@ -1,32 +1,67 @@
 ARG DEBIAN_CODENAME="trixie"
+
+
+FROM alpine:3 AS init-as-root-build
+
+SHELL ["/bin/sh", "-euxo", "pipefail", "-c"]
+
+RUN apk add build-base --no-cache
+RUN apk add shc --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/
+
+RUN --mount=type=bind,source=shc/init_as_root.sh,target=/init_as_root.sh \
+    CFLAGS="-static" shc -S -r -f /init_as_root.sh -o /init-as-root; \
+    chown root:root /init-as-root; \
+    chmod 4755 /init-as-root
+
+
 FROM debian:${DEBIAN_CODENAME}
 
+SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
+
+ENV TZ="UTC"
 ENV LC_ALL="C.UTF-8"
 ENV LANG="en_US.UTF-8"
 ENV LANGUAGE="en_US.UTF-8"
 
-SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
-
-ARG DEBIAN_FRONTEND=noninteractive
+# Install basic requirements
+ARG DEBIAN_FRONTEND="noninteractive"
 RUN apt-get update; \
     apt-get install --no-install-recommends -y \
-        curl wget ca-certificates gpg tar xz-utils locales; \
+        curl wget ca-certificates gpg tar xz-utils locales tzdata; \
+    ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime; \
+    echo "${TZ}" | tee /etc/timezone; \
+    dpkg-reconfigure -f noninteractive tzdata; \
+    echo -e "${LANG} UTF-8" | tee /etc/locale.gen; \
     locale-gen; \
     rm -rf /var/lib/apt/lists/*
 
-# TODO: use --no-install-recommends to reduce image size. WIP packages list:
-#   xpra xpra-x11 xpra-html5 adduser xdg-user-dirs xdg-utils python3-xdg gnome-backgrounds
+# Install xpra
 ARG DEBIAN_CODENAME
 RUN wget -q -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc; \
     wget -q -O "/etc/apt/sources.list.d/xpra.sources" "https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/${DEBIAN_CODENAME}/xpra.sources"; \
     apt-get update; \
+    # there's too many important recommends, it is easier to opt-out rather than opt-in
     apt-get install --install-recommends -y \
-        xpra xterm-; \
-    mkdir -p /run/dbus; \
+        # avoid xpra-client-gtk3 by avoiding xpra meta package
+        xpra-server xpra-audio-server xpra-x11 xpra-codecs-extras \
+        # avoid unnecessary recommends
+        gstreamer1.0-pipewire- python3-cups- python3-paramiko- python3-dnspython- python3-zeroconf- cups-*- xterm-; \
     apt-get install --no-install-recommends -y \
-        gnome-menus terminator; \
+        # xpra-client is needed for the health check
+        # Xdummy is better than xvfb
+        # gnome-menus is because of https://github.com/Xpra-org/xpra/issues/4644
+        # xdg-utils because it is cool
+        xpra-client xserver-xorg-video-dummy gnome-menus xdg-utils; \
+    mkdir -p /run/dbus; \
     rm -rf /var/lib/apt/lists/*
 
+# Install applications
+RUN apt-get update; \
+    apt-get install --no-install-recommends -y \
+        firefox-esr zutty; \
+    rm -rf /var/lib/apt/lists/*
+
+# Install wine
 ARG WINE_VERSION="10.13"
 ARG WINE_BRANCH="staging"
 ARG WINETRICKS_VERSION="73b92d2f3c117cd21d96e2fc807e041e7a89fec3"
@@ -54,6 +89,8 @@ RUN wget -q -O- "https://github.com/just-containers/s6-overlay/releases/download
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS="2"
 # Waits for all services to start before running CMD
 ENV S6_CMD_WAIT_FOR_SERVICES="1"
+# Honors the timeout-up for each service
+ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME="0"
 # Honors container's environment variables on CMD
 ENV S6_KEEP_ENV="1"
 
@@ -70,23 +107,28 @@ RUN groupadd -g "${NON_ROOT_USER_ID}" "${NON_ROOT_USER}"; \
     echo "${NON_ROOT_USER} ALL=(ALL) NOPASSWD:ALL" | tee "/etc/sudoers.d/${NON_ROOT_USER}"; \
     sudo -u "${NON_ROOT_USER}" true
 
-ENV WINEPREFIX="${NON_ROOT_HOME}/wine-prefix"
+# https://github.com/Xpra-org/xpra/issues/4383#issuecomment-2408586278
+ENV XDG_RUNTIME_DIR="/run/user/${NON_ROOT_USER_ID}"
+RUN mkdir -p "${XDG_RUNTIME_DIR}"; \
+    chown "${NON_ROOT_USER_ID}:${NON_ROOT_USER_ID}" "${XDG_RUNTIME_DIR}"; \
+    chmod 700 "${XDG_RUNTIME_DIR}"
+
+COPY ./rootfs /
+COPY --from=init-as-root-build /init-as-root /init-as-root
+
+USER ${NON_ROOT_USER}
+
+ENV USER="${NON_ROOT_USER}"
+ENV HOME="${NON_ROOT_HOME}"
+
+ENV WINEPREFIX="${HOME}/wine-prefix"
 ENV WINEARCH="win32"
 ENV DISPLAY=":10"
 
-# https://github.com/Xpra-org/xpra/issues/4383#issuecomment-2408586278
-ENV XPRA_PRIVATE_PULSEAUDIO=0
-
-COPY ./rootfs /
-
 EXPOSE 8080
 
-ENTRYPOINT ["/init", "/entrypoint.sh"]
+ENTRYPOINT ["/init-as-root"]
 CMD []
 
-RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb; \
-    apt-get update; \
-    apt-get install --no-install-recommends -y \
-        ./google-chrome-stable_current_amd64.deb; \
-    rm -f google-chrome-stable_current_amd64.deb; \
-    rm -rf /var/lib/apt/lists/*
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=15s --start-interval=5s \
+  CMD xpra connect-test tcp://127.0.0.1:8080 || exit 1
