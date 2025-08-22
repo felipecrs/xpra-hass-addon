@@ -16,6 +16,9 @@ map:
   - type: data
     path: /home/xpra-addon
     read_only: false
+  - type: addon_config
+    path: /config
+    read_only: false
   - type: media
     path: /media
     read_only: false

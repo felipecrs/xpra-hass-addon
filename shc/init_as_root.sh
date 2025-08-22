@@ -30,7 +30,7 @@ chown "${NON_ROOT_USER_ID}:${NON_ROOT_USER_ID}" "${NON_ROOT_HOME}/.xpra"
 chmod 700 "${NON_ROOT_HOME}/.xpra"
 
 if [[ $# -eq 0 ]]; then
-    set -- xpra seamless "${DISPLAY}" --daemon=no --bind-tcp=0.0.0.0:8080 --mdns=no --webcam=no --printing=no --systemd-run=no --xvfb=Xdummy
+    set -- xpra seamless "${DISPLAY}" --daemon=no --bind-tcp=0.0.0.0:8080 --mdns=no --webcam=no --printing=no --systemd-run=no --xvfb=Xdummy --start-late="zutty -e /initialize.sh"
 fi
 
 exec /init /command/s6-setuidgid "${NON_ROOT_USER}" "$@"

@@ -27,7 +27,7 @@ ENV LANGUAGE="en_US.UTF-8"
 ARG DEBIAN_FRONTEND="noninteractive"
 RUN apt-get update; \
     apt-get install --no-install-recommends -y \
-        curl wget ca-certificates gpg tar xz-utils locales tzdata; \
+        curl wget ca-certificates gpg tar xz-utils whiptail locales tzdata; \
     ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime; \
     echo "${TZ}" | tee /etc/timezone; \
     dpkg-reconfigure -f noninteractive tzdata; \
@@ -99,6 +99,8 @@ ENV USER="${NON_ROOT_USER}"
 ENV HOME="${NON_ROOT_HOME}"
 
 ENV DISPLAY=":10"
+
+WORKDIR "${NON_ROOT_HOME}"
 
 EXPOSE 8080
 
