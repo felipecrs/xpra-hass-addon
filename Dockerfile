@@ -51,33 +51,10 @@ RUN wget -q -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc; \
         # Xdummy is better than xvfb
         # gnome-menus is because of https://github.com/Xpra-org/xpra/issues/4644
         # xdg-utils because it is cool
-        xpra-client xserver-xorg-video-dummy gnome-menus xdg-utils; \
+        # zutty to provide some terminal
+        xpra-client xserver-xorg-video-dummy gnome-menus xdg-utils zutty; \
     mkdir -p /run/dbus; \
     rm -rf /var/lib/apt/lists/*
-
-# Install applications
-RUN apt-get update; \
-    apt-get install --no-install-recommends -y \
-        firefox-esr zutty; \
-    rm -rf /var/lib/apt/lists/*
-
-# Install wine
-ARG WINE_VERSION="10.13"
-ARG WINE_BRANCH="staging"
-ARG WINETRICKS_VERSION="73b92d2f3c117cd21d96e2fc807e041e7a89fec3"
-ARG DOCKER_WINE_VERSION="6284e6ab06aef285263d1f77a5b1554afb1e83d9"
-RUN dpkg --add-architecture i386; \
-    mkdir -p /etc/apt/keyrings; \
-    wget -q -O - https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor -o /etc/apt/keyrings/winehq-archive.key -; \
-    wget -q -O "/etc/apt/sources.list.d/winehq.sources" "https://dl.winehq.org/wine-builds/debian/dists/${DEBIAN_CODENAME}/winehq-${DEBIAN_CODENAME}.sources"; \
-    apt-get update; \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
-        "winehq-${WINE_BRANCH}=${WINE_VERSION}~*" zenity cabextract; \
-    rm -rf /var/lib/apt/lists/*; \
-    wget -q -O /usr/bin/winetricks "https://raw.githubusercontent.com/Winetricks/winetricks/${WINETRICKS_VERSION}/src/winetricks"; \
-    chmod +x /usr/bin/winetricks; \
-    wget -q -O- "https://raw.githubusercontent.com/scottyhardy/docker-wine/${DOCKER_WINE_VERSION}/download_gecko_and_mono.sh" \
-        | bash -s -- "${WINE_VERSION}"
 
 ARG S6_OVERLAY_VERSION="3.2.1.0"
 RUN wget -q -O- "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" \
@@ -121,8 +98,6 @@ USER ${NON_ROOT_USER}
 ENV USER="${NON_ROOT_USER}"
 ENV HOME="${NON_ROOT_HOME}"
 
-ENV WINEPREFIX="${HOME}/wine-prefix"
-ENV WINEARCH="win32"
 ENV DISPLAY=":10"
 
 EXPOSE 8080
