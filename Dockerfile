@@ -38,7 +38,7 @@ RUN apt-get update; \
 # Install xpra
 ARG DEBIAN_CODENAME
 RUN wget -q -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc; \
-    wget -q -O "/etc/apt/sources.list.d/xpra.sources" "https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/${DEBIAN_CODENAME}/xpra.sources"; \
+    wget -q -O "/etc/apt/sources.list.d/xpra.sources" "https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/${DEBIAN_CODENAME}/xpra-beta.sources"; \
     apt-get update; \
     # there's too many important recommends, it is easier to opt-out rather than opt-in
     apt-get install --install-recommends -y \
@@ -53,7 +53,7 @@ RUN wget -q -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc; \
         # xdg-utils because it is cool
         # terminator to provide some terminal emulator
         # x11-utils for tools like xmessage
-        xpra-client xserver-xorg-video-dummy gnome-menus xdg-utils terminator nano x11-utils; \
+        xpra-client xserver-xorg-video-dummy gnome-menus fluxbox xdg-utils terminator nano x11-utils; \
     mkdir -p /run/dbus; \
     rm -rf /var/lib/apt/lists/*
 
