@@ -42,7 +42,7 @@ for file in /etc/skel/.*; do
 done
 
 if [[ $# -eq 0 ]]; then
-    set -- xpra seamless "${DISPLAY}" --daemon=no --bind-tcp=0.0.0.0:8080 --mdns=no --webcam=no --printing=no --systemd-run=no --ssh-upgrade=no --xvfb=Xdummy --start-late="terminator -e /initialize.sh"
+    set -- xpra seamless "${DISPLAY}" --daemon=no --bind-tcp=0.0.0.0:8080 --mdns=no --webcam=no --printing=no --systemd-run=no --ssh-upgrade=no --xvfb=Xdummy --start-late="terminator -e /opt/xpra-hass-addon/initialize.sh"
 fi
 
 exec /init /command/s6-setuidgid "${NON_ROOT_USER}" "$@"

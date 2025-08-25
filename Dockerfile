@@ -110,3 +110,5 @@ CMD []
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=15s --start-interval=5s \
   CMD xpra connect-test tcp://127.0.0.1:8080 || exit 1
+
+RUN ["/opt/xpra-hass-addon/run_custom_build_script.sh"]
