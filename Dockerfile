@@ -94,6 +94,8 @@ RUN mkdir -p "${XDG_RUNTIME_DIR}"; \
 COPY ./rootfs /
 COPY --from=init-as-root-build /init-as-root /init-as-root
 
+RUN ["/opt/xpra-hass-addon/run_custom_build_script.sh"]
+
 USER ${NON_ROOT_USER}
 
 ENV USER="${NON_ROOT_USER}"
@@ -110,5 +112,3 @@ CMD []
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=15s --start-interval=5s \
   CMD xpra connect-test tcp://127.0.0.1:8080 || exit 1
-
-RUN ["/opt/xpra-hass-addon/run_custom_build_script.sh"]
