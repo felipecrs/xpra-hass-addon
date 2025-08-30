@@ -13,11 +13,8 @@ ingress_stream: true
 panel_icon: mdi:web
 video: true
 map:
-  - type: data
-    path: /home/xpra-addon
-    read_only: false
   - type: addon_config
-    path: /config
+    path: /home/xpra-addon
     read_only: false
   - type: media
     path: /media
